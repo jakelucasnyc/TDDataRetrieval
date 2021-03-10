@@ -10,7 +10,7 @@ import datetime
 import logging
 import webbrowser
 
-logging.basicConfig(level= logging.INFO)
+# logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 
@@ -129,7 +129,7 @@ class Auth:
 
 		log.info('Access Token and Refresh Token Obtained')
 
-		return self.accessToken, self.refreshToken
+		return self.accessToken
 
 	def main(self):
 		"""

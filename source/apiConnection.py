@@ -1,6 +1,6 @@
 import logging
 import requests
-import secrets
+from secrets import secrets
 
 log = logging.getLogger(__name__)
 

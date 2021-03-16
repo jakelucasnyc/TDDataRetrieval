@@ -1,5 +1,6 @@
 import requests
 from lxml import html
+import os
 import urllib
 import secrets
 from selenium import webdriver
@@ -8,7 +9,8 @@ from oauthlib.oauth2 import BackendApplicationClient
 import time
 import datetime
 import logging
-import webbrowser
+import json
+# import webbrowser
 
 # logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -20,10 +22,12 @@ class Auth:
 		self.uri = 'https://127.0.0.1:5050'
 		self.accessToken = None
 		self.refreshToken = None
-
+		self.accessExpiresIn = None
+		self.refreshExpiresIn = None
+		self.currentTime = int(time.time())
 	def getInitialAuthCodeUI(self):
 		"""
-		Log into TD Ameritrade Account and get an access code used for OAuth 2
+		Optional UI Method for starting Authentication Procedure
 		"""
 
 		loginURL = f'https://auth.tdameritrade.com/auth?response_type=code&redirect_uri={urllib.parse.quote_plus(self.uri)}&client_id={secrets.CONSUMER_KEY}%40AMER.OAUTHAP'
@@ -57,7 +61,7 @@ class Auth:
 		parsedURL = urllib.parse.urlparse(url)
 		query = urllib.parse.parse_qs(parsedURL.query)
 		if not query['code']:
-			raise Exception('[ERROR] No Code in URL!')
+			log.error('No Code in Redirect URI')
 
 		decodedCode = query['code']
 		# print(decodedCode[0])
@@ -69,10 +73,13 @@ class Auth:
 		return decodedCode[0] #there will only ever be one value in this key-value pair, but the value is always in a list, even if there is only one value
 
 	def getInitialAuthCodeAuto(self):
-		pass
+		"""
+		Fast, No UI Method to Start Authentication Procedure
+		"""
+
 		# loginFormURL1 = f'https://auth.tdameritrade.com/oauth?response_type=code&redirect_uri={urllib.parse.quote_plus(self.uri)}&client_id={secrets.CONSUMER_KEY}%40AMER.OAUTHAP'
 		loginURL = f'https://auth.tdameritrade.com/auth?response_type=code&redirect_uri={urllib.parse.quote_plus(self.uri)}&client_id={secrets.CONSUMER_KEY}%40AMER.OAUTHAP&lang=en-us'
-		userInfo = {
+		loginInfo = {
 			"su_username": secrets.USERNAME,
 			"su_password": secrets.PASSWORD
 		}
@@ -80,28 +87,63 @@ class Auth:
 			try:
 				loginGetResponse = s.get(loginURL)
 
-				root = html.fromstring(loginGetResponse.content)
-	
-				loginForm = root.cssselect('form#authform')
-				log.debug('First Action Path: ', loginForm[0].action)
-				loginPostPath = loginForm[0].action
-				loginPostLink = f'https://auth.tdameritrade.com{loginPostPath}'
+				loginPageHtml = html.fromstring(loginGetResponse.content)
+				loginActionLink = self._getFullActionLink(loginPageHtml)
+				loginHiddenInputs = self._getHiddenInputTags(loginPageHtml)
 
-				loginPostResponse = s.post(loginPostLink, data=userInfo)
-				webbrowser.open_new_tab(loginPostResponse.url)
+				loginInfo.update(loginHiddenInputs)
+				
+				loginPostResponse = s.post(loginActionLink, 
+											data=loginInfo, 
+											cookies=secrets.LOGIN_COOKIE)
 
+				allowPrivilegesHtml = html.fromstring(loginPostResponse.content)
+				allowPrivilegesActionLink = self._getFullActionLink(allowPrivilegesHtml)
+				allowPrivilegesHiddenInputs = self._getHiddenInputTags(allowPrivilegesHtml)
 
-				# firstPostResponse = requests.post(loginFormURL, data=userInfo)
-				# time.sleep(0.5)
-				# secondPostResponse = requests.post(firstPostResponse.url)
-				# # redirectURL = s.get(loginFormURL)
-				# log.debug(secondPostResponse)
-				# # log.debug(secondPostResponse.url)
-				# webbrowser.open_new_tab(secondPostResponse.url)
-			except ConnectionError:
-				log.error('Cannot Connect to Initial Login Site')
+				allowPrivilegesPostResponse = s.post(allowPrivilegesActionLink, 
+													data=allowPrivilegesHiddenInputs, 
+													cookies=loginPostResponse.cookies,
+													allow_redirects=False)
+
+				codeURL = allowPrivilegesPostResponse.headers['Location']
+
+				parsedURL = urllib.parse.urlparse(codeURL)
+				query = urllib.parse.parse_qs(parsedURL.query)
+				if not query['code']:
+					log.error('No Code in Redirect URI')
+
+				decodedCode = query['code']
+
+				log.info('Authorization Code Received')
+
+				return decodedCode[0] #list with only one element
+
+			except ConnectionError as e:
+				log.error(e)
 
 		
+	def _getFullActionLink(self, root):
+		"""
+		Gets the action link of a form given a root (Htmletree or HtmlElement). Used in getInitialAuthCodeAuto
+		"""
+		loginForm = root.cssselect('form#authform')
+		loginPostPath = loginForm[0].action
+		loginPostLink = f'https://auth.tdameritrade.com{loginPostPath}'
+		return loginPostLink #only one form, but it is in list format. I want it in string format
+
+	def _getHiddenInputTags(self, root):
+		"""
+		Gets all input tags of a root so the form can be properly submitted. Used in getInitialAuthCodeAuto
+		"""
+		loginForm = root.cssselect('form#authform')
+		hiddenInputs = {}
+		for inputTag in loginForm[0].iter('input'):
+			if inputTag.attrib['type'] == 'hidden' and 'name' in inputTag.attrib.keys():
+				# print(inputTag.attrib)
+				hiddenInputs.update({inputTag.attrib['name']: inputTag.attrib['value']})
+
+		return hiddenInputs
 
 
 	def getAccessTokenFromCode(self, code):
@@ -117,36 +159,93 @@ class Auth:
 		response = requests.post('https://api.tdameritrade.com/v1/oauth2/token', data=payload)
 		log.info('Code Sent To TD Auth Server')
 
-		try:
-
-			self.accessToken = response.json()['access_token']
-			self.refreshToken = response.json()['refresh_token']
-			log.debug(self.accessToken)
-
-		except KeyError:
-			log.error('No Access Token or Refresh Token in Response')
-			log.error('Response Content: '+ response.json())
+		self._saveResponseData(response)
 
 		log.info('Access Token and Refresh Token Obtained')
 
 		return self.accessToken
 
+	def getAccessTokenFromRefresh(self, refreshToken):
+
+		payload = {
+			'grant_type': 'refresh_token',
+			'refresh_token': refreshToken,
+			'access_type': 'offline',
+			'client_id': f'{secrets.CONSUMER_KEY}@AMER.OAUTHAP'
+		}
+
+		response = requests.post('https://api.tdameritrade.com/v1/oauth2/token', data=payload)
+		log.info('Sent Refresh Token Request')
+
+		self._saveResponseData(response)
+
+		log.info('Access Token and New Refresh Token Obtained')
+
+		return self.accessToken
+
+	def _saveResponseData(self, response):
+		'''
+		Helper function reducing redundancy in getAccessTokenFromRefresh and getAccessTokenFromCode
+		'''
+		try:
+
+			self.accessToken = response.json()['access_token']
+			self.accessExpiresIn = response.json()['expires_in']
+			self.refreshToken = response.json()['refresh_token']
+			self.refreshExpiresIn = response.json()['refresh_token_expires_in']
+			self.current_time = int(time.time())
+			log.debug(self.accessToken)
+
+		except KeyError as e:
+			log.error('No Access Token or Refresh Token in Response')
+			log.error('Status Code: ' + response.status_code)
+			log.error('Response Content: '+ response.json())
+
+
+
+	def saveTokens(self, accessToken, refreshToken, accessExpiresIn, refreshExpiresIn, currentTime):
+		accessExpDate = currentTime + accessExpiresIn
+		refreshExpDate = currentTime + refreshExpiresIn
+		tokensDict = {
+			'accessToken': accessToken,
+			'accessExpDate': accessExpDate,
+			'refreshToken': refreshToken,
+			'refreshExpDate': refreshExpDate
+		}
+
+		with open('../resources/tokens.json', 'w') as f:
+			json.dump(tokensDict, f)
+
 	def main(self):
 		"""
 		Check if auth code is needed, then either use a refresh token or get a fresh auth code to get a new access token
 		"""
-		needsCode = input('Do you need an authorization code? (y/n): ')
+		now = time.time()
+		with open('../resources/tokens.json', 'r') as f:
+			tokenData = json.load(f)
 
-		if needsCode =='y':
-			code = self.getInitialAuthCodeUI()
+		if now > tokenData['accessExpDate'] and now > tokenData['refreshExpDate']:
+			log.info('Neither Token is Valid')
+			code = self.getInitialAuthCodeAuto()
 			accessToken = self.getAccessTokenFromCode(code)
-			return accessToken
-		elif needsCode == 'n':
-			pass
+			self.saveTokens(self.accessToken, self.refreshToken, self.accessExpiresIn, self.refreshExpiresIn, self.currentTime)
+			
+		elif now > tokenData['accessExpDate'] and now < tokenData['refreshExpDate']:
+			log.info('Refresh Token Still Valid')
+			accessToken = self.getAccessTokenFromRefresh(tokenData['refreshToken'])
+			self.saveTokens(self.accessToken, self.refreshToken, self.accessExpiresIn, self.refreshExpiresIn, self.currentTime)
+
+		elif now < tokenData['accessExpDate']:
+			log.info('Access Token Still Valid')
+			accessToken = tokenData['accessToken']
 
 		else:
-			print('Please input a "y" or "n" to answer the question')
-			self.main()
+			raise Error('My Auth.main logic is flawed')
+
+
+		return accessToken
+
+			
 
 
 

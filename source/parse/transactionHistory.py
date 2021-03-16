@@ -1,4 +1,4 @@
-from Parse.Base import Base
+from parse.base import Base
 
 class TransactionHistoryParse(Base):
 

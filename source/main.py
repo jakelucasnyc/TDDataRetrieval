@@ -1,7 +1,7 @@
 import logging
-from Auth import Auth
-from APIConnection import APIConnection
-from Parse import TransactionHistory
+from auth import Auth
+from apiConnection import APIConnection
+from parse import transactionHistory
 
 def main():
 	logging.basicConfig(level=logging.INFO)
@@ -12,7 +12,7 @@ def main():
 	accessToken = authenticator.main()
 	apiConn = APIConnection(authenticator, accessToken)
 	dataDict = apiConn.main()
-	parser = TransactionHistory.TransactionHistoryParse(dataDict)
+	parser = transactionHistory.TransactionHistoryParse(dataDict)
 	parser.main()
 
 

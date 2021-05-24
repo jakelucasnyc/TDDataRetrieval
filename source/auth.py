@@ -5,7 +5,6 @@ import urllib
 from secrets import secrets
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from oauthlib.oauth2 import BackendApplicationClient
 import time
 import datetime
 import logging
@@ -77,7 +76,6 @@ class Auth:
 		Fast, No UI Method to Start Authentication Procedure
 		"""
 
-		# loginFormURL1 = f'https://auth.tdameritrade.com/oauth?response_type=code&redirect_uri={urllib.parse.quote_plus(self.uri)}&client_id={secrets.CONSUMER_KEY}%40AMER.OAUTHAP'
 		loginURL = f'https://auth.tdameritrade.com/auth?response_type=code&redirect_uri={urllib.parse.quote_plus(self.uri)}&client_id={secrets.CONSUMER_KEY}%40AMER.OAUTHAP&lang=en-us'
 		loginInfo = {
 			"su_username": secrets.USERNAME,
@@ -119,8 +117,8 @@ class Auth:
 
 				return decodedCode[0] #list with only one element
 
-			except ConnectionError as e:
-				log.error(e)
+			except (KeyError) as e:
+				log.error(f'Getting Initial Auth Code Unsuccessful (Cookie is Likely Incorrect. Be sure to register account with OAuth App.\nError: {e}')
 
 		
 	def _getFullActionLink(self, root):
@@ -157,13 +155,18 @@ class Auth:
 		}
 
 		response = requests.post('https://api.tdameritrade.com/v1/oauth2/token', data=payload)
-		log.info('Code Sent To TD Auth Server')
+		if response.status_code == 200:
+			log.info('Code Sent To TD Auth Server')
 
-		self._saveResponseData(response)
+			self._saveResponseData(response)
 
-		log.info('Access Token and Refresh Token Obtained')
+			log.info('Access Token and Refresh Token Obtained')
 
-		return self.accessToken
+			return self.accessToken
+
+		else:
+			log.error(f'Auth Token from Code Unsuccessful. Status Code: {response.status_code}')
+			return None
 
 	def getAccessTokenFromRefresh(self, refreshToken):
 
@@ -175,13 +178,19 @@ class Auth:
 		}
 
 		response = requests.post('https://api.tdameritrade.com/v1/oauth2/token', data=payload)
-		log.info('Sent Refresh Token Request')
 
-		self._saveResponseData(response)
+		if response.status_code == 200:
+			log.info('Sent Refresh Token Request')
 
-		log.info('Access Token and New Refresh Token Obtained')
+			self._saveResponseData(response)
 
-		return self.accessToken
+			log.info('Access Token and New Refresh Token Obtained')
+
+			return self.accessToken
+
+		else:
+			log.error(f'Auth Token from Refresh Unsuccessful. Status Code: {response.status_code}')
+			return None
 
 	def _saveResponseData(self, response):
 		'''

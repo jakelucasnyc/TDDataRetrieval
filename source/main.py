@@ -8,7 +8,7 @@ def main():
 	logging.basicConfig(filename='../app.log', format='%(asctime)s - %(levelname)s:%(name)s -> %(message)s', level=logging.INFO)
 	log = logging.getLogger(__name__)
 
-	log.info('Application started')
+	log.info('\nApplication started')
 
 	dbConn = DBConnection()
 	authenticator = Auth()

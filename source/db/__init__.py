@@ -22,6 +22,7 @@ class DBConnection:
             sys.exit()
             
         self._session = sessionmaker(self._engine)
+        tableBase.metadata.create_all(self._engine)
         self.tableModels = {cls.__tablename__: cls for cls in tableBase.__subclasses__()}
 
 

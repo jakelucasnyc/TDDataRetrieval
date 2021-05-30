@@ -16,7 +16,8 @@ class DBConnection:
     def __init__(self):
         self._engine = create_engine(DBConnection.DATABASE_URL, echo_pool=True)
         try:
-            self._engine.connect()
+            testConn = self._engine.connect()
+            testConn.close()
         except sqlalchemy.exc.OperationalError as e:
             log.exception('Unable to connect to database. Ending Program')
             sys.exit()
@@ -27,7 +28,7 @@ class DBConnection:
 
 
 
-    def insertTransaction(self, parsedData: dict):
+    def insert(self, parsedData: dict):
       with self._session() as conn:
         with conn.begin():
            

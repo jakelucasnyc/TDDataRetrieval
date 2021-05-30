@@ -2,7 +2,7 @@ import logging
 from auth import Auth
 from apiConnection import APIConnection
 from parse.transactionHistory import TransactionHistoryParse
-from dbConnection import DBConnection
+from db import DBConnection
 
 def main():
 	logging.basicConfig(level=logging.INFO)
@@ -12,11 +12,11 @@ def main():
 	authenticator = Auth()
 	accessToken = authenticator.main()
 	apiConn = APIConnection(authenticator, accessToken)
-	# transactions = apiConn.getTransactionHistory(startDate='2021-01-01')
-	# for transaction in transactions:
-	# 	dbConn.insertTransaction(transaction)
+	transactions = apiConn.getTransactionHistory(startDate='2021-04-01')
+	for transaction in transactions:
+		dbConn.insertTransaction(transaction)
 
-	acctData = apiConn.getAccountsData()
+	# acctData = apiConn.getAccountsData()
 
 
 

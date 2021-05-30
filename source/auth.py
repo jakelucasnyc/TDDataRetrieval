@@ -56,14 +56,12 @@ class Auth:
 
 		url = driver.current_url
 		driver.quit()
-		# print(url)
 		parsedURL = urllib.parse.urlparse(url)
 		query = urllib.parse.parse_qs(parsedURL.query)
 		if not query['code']:
 			log.error('No Code in Redirect URI')
 
 		decodedCode = query['code']
-		# print(decodedCode[0])
 
 		# time.sleep(30)
 		log.info('Authorization Code Received')
@@ -138,7 +136,6 @@ class Auth:
 		hiddenInputs = {}
 		for inputTag in loginForm[0].iter('input'):
 			if inputTag.attrib['type'] == 'hidden' and 'name' in inputTag.attrib.keys():
-				# print(inputTag.attrib)
 				hiddenInputs.update({inputTag.attrib['name']: inputTag.attrib['value']})
 
 		return hiddenInputs

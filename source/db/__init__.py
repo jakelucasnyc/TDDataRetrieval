@@ -1,5 +1,6 @@
 
 from appSecrets import dbSecrets
+import sys
 import logging
 from sqlalchemy import select, create_engine
 from sqlalchemy.orm import sessionmaker
@@ -10,10 +11,16 @@ from db.transactions import *
 log = logging.getLogger(__name__)
 class DBConnection:
 
-    DATABASE_URL = f'mysql+pymysql://{dbSecrets.USER}:{dbSecrets.PASS}@{dbSecrets.HOST}/td_ameritrade_data?charset=utf8mb4'
+    DATABASE_URL = f'mysql+pymysql://{dbSecrets.USER}:{dbSecrets.PASS}@{dbSecrets.HOST}:{dbSecrets.PORT}/td_ameritrade_data?charset=utf8mb4'
 
     def __init__(self):
         self._engine = create_engine(DBConnection.DATABASE_URL, echo_pool=True)
+        try:
+            self._engine.connect()
+        except sqlalchemy.exc.OperationalError as e:
+            log.error('Unable to connect to database. Ending Program')
+            sys.exit()
+            
         self._session = sessionmaker(self._engine)
         self.tableModels = {cls.__tablename__: cls for cls in tableBase.__subclasses__()}
 

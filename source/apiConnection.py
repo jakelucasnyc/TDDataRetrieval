@@ -1,6 +1,6 @@
 import logging
 import requests
-from secrets import secrets
+from appSecrets import secrets
 from parse import TransactionHistoryParse
 
 log = logging.getLogger(__name__)

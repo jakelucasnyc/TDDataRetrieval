@@ -18,7 +18,7 @@ class DBConnection:
         try:
             self._engine.connect()
         except sqlalchemy.exc.OperationalError as e:
-            log.error('Unable to connect to database. Ending Program')
+            log.exception('Unable to connect to database. Ending Program')
             sys.exit()
             
         self._session = sessionmaker(self._engine)
@@ -36,7 +36,7 @@ class DBConnection:
 
           tableObj = self.tableModels[parsedData['table']]      
           insertedData = {key: value for key, value in parsedData.items() if key != 'table'}
-          print('Inserted Data: ', insertedData)
+          log.debug(f'Inserted Data: {insertedData}')
           ins = insert(tableObj).values(**insertedData)
           #if a duplicate primary key is present, update data without re-inserting primary key
           stmt = ins.on_duplicate_key_update(**{key: value for key, value in insertedData.items() if getattr(tableObj, key).primary_key == True})

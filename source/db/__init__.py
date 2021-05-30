@@ -1,5 +1,5 @@
 
-from secrets import dbSecrets
+from appSecrets import dbSecrets
 import logging
 from sqlalchemy import select, create_engine
 from sqlalchemy.orm import sessionmaker

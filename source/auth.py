@@ -2,7 +2,7 @@ import requests
 from lxml import html
 import os
 import urllib
-from secrets import secrets
+from appSecrets import secrets
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 import time
@@ -219,7 +219,7 @@ class Auth:
 			'refreshExpDate': refreshExpDate
 		}
 
-		with open('secrets/tokens.json', 'w') as f:
+		with open('appSecrets/tokens.json', 'w') as f:
 			json.dump(tokensDict, f)
 
 	def main(self):
@@ -227,7 +227,7 @@ class Auth:
 		Check if auth code is needed, then either use a refresh token or get a fresh auth code to get a new access token
 		"""
 		now = time.time()
-		with open('secrets/tokens.json', 'r') as f:
+		with open('appSecrets/tokens.json', 'r') as f:
 			tokenData = json.load(f)
 
 		if now > tokenData['accessExpDate'] and now > tokenData['refreshExpDate']:

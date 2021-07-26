@@ -14,11 +14,11 @@ def main():
     authenticator = Auth()
     accessToken = authenticator.main()
     apiConn = APIConnection(authenticator, accessToken)
-    transactions = apiConn.getTransactionHistory(startDate='2021-04-01')
-    for transaction in transactions:
-        dbConn.insert(transaction)
-    log.info('Inserted transactions')
-    acctData = apiConn.getAccountsData(True)
+    # transactions = apiConn.getTransactionHistory(startDate='2021-04-01')
+    # for transaction in transactions:
+        # dbConn.insert(transaction)
+    # log.info('Inserted transactions')
+    accts, positions, balances = apiConn.getAccountsData()
 
 
 

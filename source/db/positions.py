@@ -17,6 +17,8 @@ class Positions(tableBase):
     asset_type = sqlalchemy.Column(sqlalchemy.String(15))
     cusip = sqlalchemy.Column(sqlalchemy.String(30))
     symbol = sqlalchemy.Column(sqlalchemy.String(30))
+    put_or_call = sqlalchemy.Column(sqlalchemy.String(5))
+    underlying_symbol = sqlalchemy.Column(sqlalchemy.String(6))
     instrument_description = sqlalchemy.Column(sqlalchemy.Text)
     instrument_type = sqlalchemy.Column(sqlalchemy.String(30))
     market_value = sqlalchemy.Column(sqlalchemy.Float)

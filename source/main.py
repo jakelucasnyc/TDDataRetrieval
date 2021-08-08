@@ -5,7 +5,8 @@ from parse.transactions import TransactionHistoryParse
 from db import DBConnection
 
 def main():
-    logging.basicConfig(filename='../app.log', format='%(asctime)s - %(levelname)s:%(name)s -> %(message)s', level=logging.INFO)
+    # logging.basicConfig(filename='../app.log', format='%(asctime)s - %(levelname)s:%(name)s -> %(message)s', level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
     log = logging.getLogger(__name__)
 
     log.info('Application started')
@@ -14,11 +15,16 @@ def main():
     authenticator = Auth()
     accessToken = authenticator.main()
     apiConn = APIConnection(authenticator, accessToken)
-    # transactions = apiConn.getTransactionHistory(startDate='2021-04-01')
-    # for transaction in transactions:
-        # dbConn.insert(transaction)
-    # log.info('Inserted transactions')
-    accts, positions, balances = apiConn.getAccountsData()
+    for yearDiff in range(10, 21):
+        year = 2000 + yearDiff 
+        print(year)
+
+        transactions = apiConn.getTransactionHistory(startDate=f'{year}-01-01')
+        for transaction in transactions:
+            dbConn.insert(transaction)
+        log.info('Inserted transactions')
+        # break
+    # accts, positions, balances = apiConn.getAccountsData()
 
 
 

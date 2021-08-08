@@ -7,7 +7,7 @@ class PositionsParse:
     self.dataDict = dataDict 
     self.positions = self.dataDict['securitiesAccount']['positions']
 
-  def _getData():
+  def _getData(self):
     parsedPositions = []    
     for position in self.positions:    
       try:

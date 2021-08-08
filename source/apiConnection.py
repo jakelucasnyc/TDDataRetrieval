@@ -2,6 +2,7 @@ import logging
 import requests
 from appSecrets import secrets
 from parse import TransactionHistoryParse, PositionsParse, AccountParse
+import pprint
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class APIConnection:
       commonKeys = [key for key in set(firstKeys).intersection(*remainingKeys)]
       # print(commonKeys)
       for balance in balances:
-        print({key: value for key, value in balance.items() if not key in commonKeys}, end='\n\n')
+        pprint.pprint({key: value for key, value in balance.items() if not key in commonKeys}, end='\n\n')
       return accounts, positions, balances
 
     else:

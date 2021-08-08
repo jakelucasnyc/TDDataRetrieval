@@ -62,7 +62,6 @@ class TransactionHistoryParse():
 						'transaction_id': self.dataDict['transactionId'],
 						'account_id': self.dataDict['transactionItem']['accountId'],
 						# 'expiration_date': self.transactionItem['instrument']['optionExpirationDate'],
-						'ticker': self.dataDict['transactionItem']['instrument']['underlyingSymbol'],
 						'symbol': self.dataDict['transactionItem']['instrument']['symbol'],
 						'cusip': self.dataDict['transactionItem']['instrument']['cusip'],
 						# 'put_or_call': self.dataDict['transactionItem']['instrument']['putCall'],
@@ -79,6 +78,9 @@ class TransactionHistoryParse():
 						'description': self.dataDict['description']
 					}
 					parsedDict.update(addedData)
+
+					if 'underlyingSymbol' in self.dataDict['transactionItem']['instrument'].keys():
+						parsedDict.update({'ticker': self.dataDict['transactionItem']['instrument']['underlyingSymbol']})
 
 			elif self.dataDict['type'] == 'DIVIDEND_OR_INTEREST':
 
@@ -195,6 +197,7 @@ class TransactionHistoryParse():
 		except (KeyError) as e:
 			log.exception(f'Key or Attribute not found in data. Must change data categorization logic.\nError: {e}\nDataDict: {self.dataDict}')
 			# print('\n\n', self.dataDict, '\n\n')
+			parsedDict = {}
 
 		else:
 			log.debug('Successful Data Parsing')
